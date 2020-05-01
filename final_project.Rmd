@@ -1,5 +1,5 @@
 ---
-title: "Final_project"
+title: "Final project"
 author: "Elena Novikova"
 date: "4/27/2020"
 output: pdf_document
@@ -77,6 +77,28 @@ kable(My_strata, caption = Mystrata_table_title)
 
 ```
 
+```{r}
+demographics <- read.csv("DEMOGRAPHICS.csv")
+
+
+PovertyByStrata <- demographics %>% 
+  group_by(Strata_ID_Number) %>%
+  filter(!str_detect(Poverty, "-")) %>% 
+  summarise(Poverty = mean(Poverty))
+
+strata37 <- demographics %>% 
+  filter(Strata_ID_Number == 37) %>% 
+  select(CHSI_County_Name, CHSI_State_Name, Poverty)
+
+Strata9 <- PovertyByStrata %>% 
+  filter(Strata_ID_Number == 9)
+
+ggplot(data = PovertyByStrata, aes(Strata_ID_Number, Poverty)) +
+  geom_bar(stat = "identity") +
+  geom_bar(data = Strata9, aes(Strata_ID_Number, Poverty, fill = Strata_ID_Number), stat = "identity", show.legend = FALSE)+ 
+  ggtitle("County data per strata, individuals living below poverty level, %") +
+  xlab("Strata ID") + ylab("Poverty, %")
+```
 
 
 
