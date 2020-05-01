@@ -9,22 +9,18 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
-```{r cars}
-summary(cars)
-```
 
-## Including Plots
 
-You can also embed plots, for example:
+Bibliography:
 
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
+1. The County Health Rankings & Roadmaps program. (August 30, 2017). Peer Counties Tool.
+Retrieved 30 April 2020, from https://www.countyhealthrankings.org/resources/peer-counties-tool
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+2. The County Health Rankings & Roadmaps program. (2020). New Jersey Rankings Data.
+Retrieved 30 April 2020, from https://www.countyhealthrankings.org/app/new-jersey/2020/downloads
+
+3. U.S. Government’s open data. (February 26, 2020). Community Health Status Indicators (CHSI) to Combat Obesity, Heart Disease and Cancer.
+Retrieved 30 April 2020, from https://catalog.data.gov/dataset/community-health-status-indicators-chsi-to-combat-obesity-heart-disease-and-cancer
