@@ -6,8 +6,78 @@ output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
 ```
+
+
+
+```{r}
+
+library(tidyverse)
+library(lubridate)
+library(magrittr)
+library(readxl)
+library(dplyr)
+library(openxlsx)
+library(knitr)
+
+```
+
+```{r}
+county_fips_descrip <- read_excel("CHSIpeers.xlsx", sheet = 1)
+
+county_fips_descrip <- county_fips_descrip[[2,1]]
+#county_fips_descrip <- strwrap(county_fips_descrip, width = 80)
+
+kable(county_fips_descrip, caption = "Peer Counties")
+
+#print(county_fips_descrip)
+```
+
+
+```{r}
+county_fips <- read_excel("CHSIpeers.xlsx", sheet = 2)
+
+county_fips <- county_fips %>% 
+  transmute(FIPS = `County FIPS code`, County_Name_State = `County Name, State`, PeerCountyGroup = `Peer County Group`)
+
+county_fips$FIPS <- as.character(county_fips$FIPS)
+
+county_fips$FIPS <- if_else(str_length(county_fips$FIPS) == 4, str_c("0", county_fips$FIPS), county_fips$FIPS)
+
+```
+
+```{r}
+county_fips <- county_fips %>% 
+  mutate(County = str_extract(County_Name_State, ".*(?=,)"),
+          State = str_extract(County_Name_State, "(?<=, ).*")) %>% 
+  select(-County_Name_State)
+
+write_excel_csv(county_fips, "County_FIPS.csv")
+write.xlsx(county_fips, "County_FIPS.xlsx")
+
+```
+
+```{r}
+x <- filter(county_fips,County == "Passaic County")
+x <- as.character(x$PeerCountyGroup)
+
+My_strata <- county_fips %>% filter(PeerCountyGroup == x)
+tc <- My_strata %>% summarise(count = n())
+tc <- as.character(tc$count[[1]])
+
+Mystrata_table_title = str_c("Peer counties in Strata ", x, ", a total of ", tc, " counties")
+
+kable(My_strata, caption = Mystrata_table_title)
+
+
+```
+
+
 
 
 
