@@ -22,20 +22,39 @@ library(lubridate)
 library(magrittr)
 library(readxl)
 library(dplyr)
+library(stringr)
 library(openxlsx)
 library(knitr)
+library(rvest)
 
 ```
+
+```{r}
+
+CHSIdescrip <- "https://catalog.data.gov/dataset/community-health-status-indicators-chsi-to-combat-obesity-heart-disease-and-cancer" %>%
+  read_html() %>% html_nodes(".module-content") %>%
+  html_text()
+CHSIdescrip <- tibble(text = CHSIdescrip)
+CHSIdescrip <- CHSIdescrip[[1,1]]
+#strwrap(CHSIdescrip, width = 80)
+
+
+CHSIheader <- str_extract(CHSIdescrip, "[^\n \t].*")
+CHSIdate <- str_extract(CHSIdescrip, "M.*")
+CHSItext <- str_extract(CHSIdescrip, "\n +C.*") 
+CHSItext <- str_remove_all(CHSItext, "\n  +")
+CHSItable <- tibble(x = c(CHSIheader, CHSIdate, CHSItext))
+kable(CHSItable, caption = "CHSItable")
+```
+
 
 ```{r}
 county_fips_descrip <- read_excel("CHSIpeers.xlsx", sheet = 1)
 
 county_fips_descrip <- county_fips_descrip[[2,1]]
-#county_fips_descrip <- strwrap(county_fips_descrip, width = 80)
 
 kable(county_fips_descrip, caption = "Peer Counties")
 
-#print(county_fips_descrip)
 ```
 
 
@@ -65,6 +84,8 @@ write.xlsx(county_fips, "County_FIPS.xlsx")
 ```{r}
 x <- filter(county_fips,County == "Passaic County")
 x <- as.character(x$PeerCountyGroup)
+y = str_c("Passaic county, NJ belongs to strata ", x)
+print(y)
 
 My_strata <- county_fips %>% filter(PeerCountyGroup == x)
 tc <- My_strata %>% summarise(count = n())
