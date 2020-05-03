@@ -1,7 +1,7 @@
 ---
-title: "Final project"
+title: "Final Project"
 author: "Elena Novikova"
-date: "4/27/2020"
+date: "5/04/2020"
 output: pdf_document
 ---
 
@@ -26,8 +26,15 @@ library(stringr)
 library(openxlsx)
 library(knitr)
 library(rvest)
+library(choroplethr)
+library(choroplethrMaps)
 
 ```
+
+&nbsp;
+&nbsp;
+&nbsp;
+&nbsp;
 
 ```{r Web scraping from data.gov}
 
@@ -47,6 +54,10 @@ CHSItable <- tibble(x = c(CHSIheader, CHSIdate, CHSItext))
 kable(CHSItable, caption = "CHSItable")
 ```
 
+&nbsp;
+&nbsp;
+&nbsp;
+&nbsp;
 
 ```{r Peer counties decription}
 county_fips_descrip <- read_excel("CHSIpeers.xlsx", sheet = 1)
@@ -55,6 +66,10 @@ kable(county_fips_descrip, caption = "Peer Counties")
 
 ```
 
+&nbsp;
+&nbsp;
+&nbsp;
+&nbsp;
 
 ```{r Importing Peer counties table}
 county_fips <- read_excel("CHSIpeers.xlsx", sheet = 2)
@@ -62,16 +77,18 @@ county_fips <- read_excel("CHSIpeers.xlsx", sheet = 2)
 county_fips <- county_fips %>% 
   transmute(FIPS = `County FIPS code`, County_Name_State = `County Name, State`, PeerCountyGroup = `Peer County Group`)
 
-county_fips$FIPS <- as.character(county_fips$FIPS)
-# leading zeros are missing from FIPS codes after importing from excel. Adding this zero:
-county_fips$FIPS <- if_else(str_length(county_fips$FIPS) == 4, str_c("0", county_fips$FIPS), county_fips$FIPS)
 
 ```
 
-Output Excel file County_FIPS.xlsx contains FIPS codes without missing zeros.
+&nbsp;
+&nbsp;
+&nbsp;
+&nbsp;
+
+Output files County_FIPS.xlsx and County_FIPS.csv are generated.
 
 
-```{r Scraping FIPS codes}
+```{r Scraping names of counties and states}
 county_fips <- county_fips %>% 
   mutate(County = str_extract(County_Name_State, ".*(?=,)"),
           State = str_extract(County_Name_State, "(?<=, ).*")) %>% 
@@ -81,6 +98,11 @@ write_excel_csv(county_fips, "County_FIPS.csv")
 write.xlsx(county_fips, "County_FIPS.xlsx")
 
 ```
+
+&nbsp;
+&nbsp;
+&nbsp;
+&nbsp;
 
 I am a resident of Passaic county, NJ. Let's find what Strata my county belongs to, find Peer counties in this Strata, and count how many Peer counties are there:
 
@@ -210,6 +232,15 @@ ALEdf <- SummaryMeasuresOfHealth %>%
 kable(head(select(ALEdf, CHSI_County_Name, CHSI_State_Name, ALE)), caption = "County data, average life expectancy")
 
 ```
+&nbsp;
+&nbsp;
+&nbsp;
+&nbsp;
+
+&nbsp;
+&nbsp;
+&nbsp;
+&nbsp;
 
 Let's left join the Population density and the Life Expectancy data frames:
 
@@ -220,6 +251,16 @@ Pop_dens_ALEdf <- drop_na(left_join(Pop_dens, ALEdf))
 kable(head(select(Pop_dens_ALEdf, CHSI_County_Name, CHSI_State_Name, Population_Density, ALE)), caption = "Population Density and Average Life Expectancy by county")
 
 ```
+&nbsp;
+&nbsp;
+&nbsp;
+&nbsp;
+
+&nbsp;
+&nbsp;
+&nbsp;
+&nbsp;
+
 
 Let's build a Linear Model of ALE ~ Population_Density: 
 
@@ -245,7 +286,10 @@ Pop_dens_ALEdf %>%
 
 
 
-
+&nbsp;
+&nbsp;
+&nbsp;
+&nbsp;
 ```{r LM ALE and Poverty}
 Poverty_lvl <- demographics %>% 
   select(State_FIPS_Code, County_FIPS_Code, CHSI_County_Name, CHSI_State_Name, Strata_ID_Number, Poverty) %>% 
@@ -262,7 +306,10 @@ summary(ALE_Poverty_lvl)
 ```
 
 
-
+&nbsp;
+&nbsp;
+&nbsp;
+&nbsp;
 ```{r Plotting LM ALE and Poverty}
 ALE_Poverty_lvl %>% 
   ggplot(aes(Poverty, fit)) + geom_line(colour = 'red') + 
@@ -273,29 +320,64 @@ ALE_Poverty_lvl %>%
 ```
 
 
+
+
+
+&nbsp;
+&nbsp;
+&nbsp;
+&nbsp;
 ```{r average life expectancy by county US map}
 ALEdf1 <- ALEdf
 
 ALEdf1$State_FIPS_Code <- as.character(ALEdf1$State_FIPS_Code)
-ALEdf1$State_FIPS_Code <- as.character(ALEdf1$State_FIPS_Code)
 
-ALEdf1$State_FIPS_Code <- if_else(str_length(ALEdf1$State_FIPS_Code) == 1, str_c("0", ALEdf1$State_FIPS_Code), ALEdf1$State_FIPS_Code)
-
-ALEdf1$County_FIPS_Code <- as.character(ALEdf1$County_FIPS_Code)
 ALEdf1$County_FIPS_Code <- as.character(ALEdf1$County_FIPS_Code)
 
 ALEdf1$County_FIPS_Code <- if_else(str_length(ALEdf1$County_FIPS_Code) == 1, str_c("00", ALEdf1$County_FIPS_Code), ALEdf1$County_FIPS_Code)
 
 ALEdf1$County_FIPS_Code <- if_else(str_length(ALEdf1$County_FIPS_Code) == 2, str_c("0", ALEdf1$County_FIPS_Code), ALEdf1$County_FIPS_Code)
 
-ALEdf1$FIPS <- str_c(ALEdf1$State_FIPS_Code, ALEdf1$County_FIPS_Code)
+ALEdf1$FIPS <- as.numeric(str_c(ALEdf1$State_FIPS_Code, ALEdf1$County_FIPS_Code))
+
+ALEdf1 <- ALEdf1 %>% select(FIPS, CHSI_County_Name, CHSI_State_Name, ALE)
+
+kable(head(ALEdf1), caption = "FIPS codes added to the Average Life Expectancy by county dataframe")
+
+ALEdfPlot <- ALEdf1 %>% rename(value = ALE, region = FIPS)
+county_choropleth(ALEdfPlot, title = "Average Life Expectancy by county",legend = "Age", num_colors = 9)
+
 
 ```
 
+```{r average life expectancy in NJ and NY}
+county_choropleth(ALEdfPlot, title = "New Jersey and New York, Average Life Expectancy by county",legend = "Age", state_zoom = c("new jersey", "new york"), num_colors = 9)
+```
+
+
+```{r exporting average life expectancy with FIPS codes in excel}
+write.xlsx(ALEdf1, "ALE_with_FIPS.xlsx")
+```
+
+&nbsp;
+&nbsp;
+&nbsp;
+&nbsp;
+
+An excel file of average life expectancy with FIPS codes named ALE_with_FIPS.xlsx is created.
 
 
 
 
+
+
+
+
+
+&nbsp;
+&nbsp;
+&nbsp;
+&nbsp;
 
 Bibliography:
 
