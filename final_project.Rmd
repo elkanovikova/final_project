@@ -85,18 +85,18 @@ write.xlsx(county_fips, "County_FIPS.xlsx")
 I am a resident of Passaic county, NJ. Let's find what Strata my county belongs to, find Peer counties in this Strata, and count how many Peer counties are there:
 
 ```{r Passaic county Strata number, list of counties}
-x <- filter(county_fips,County == "Passaic County")
-x <- as.character(x$PeerCountyGroup)
-y = str_c("Passaic county, NJ belongs to strata ", x)
-print(y)
+Passaic <- filter(county_fips,County == "Passaic County")
+Passaic <- as.character(Passaic$PeerCountyGroup)
+PassaicStrata = str_c("Passaic county, NJ belongs to strata ", Passaic)
+print(PassaicStrata)
 
-My_strata <- county_fips %>% filter(PeerCountyGroup == x)
-tc <- My_strata %>% summarise(count = n())
+PassaicStrata <- county_fips %>% filter(PeerCountyGroup == Passaic)
+tc <- PassaicStrata %>% summarise(count = n())
 tc <- as.character(tc$count[[1]])
 
-Mystrata_table_title = str_c("Peer counties in Strata ", x, ", a total of ", tc, " counties")
+Mystrata_table_title = str_c("Peer counties in Strata ", Passaic, ", a total of ", tc, " counties")
 
-kable(My_strata, caption = Mystrata_table_title)
+kable(PassaicStrata, caption = Mystrata_table_title)
 
 ```
 
@@ -121,17 +121,15 @@ StrataCount <- StrataCount[[1]]
 ```
 
 
-```{r My strata's ranking by Poverty level}
+```{r My strata ranking by Poverty level}
 
-
-
-Strata9 <- PovertyByStrata %>% filter(Strata_ID_Number == 9)
+Strata9 <- PovertyByStrata %>% filter(Strata_ID_Number == Passaic)
 
 Strata9ranking <- Strata9$rank[[1]]
 
-Passaic_pov_lvl <- str_c("Passaic county, NJ belongs to Strata ", x, "")
 
-
+print(str_c("Passaic county, NJ belongs to Strata ", Passaic, " that ranks ", Strata9ranking, "th lowest in Poverty level "))
+print(str_c("amongst the total of ", StrataCount, " Stratas in the US."))
 ```
 
 
@@ -147,11 +145,10 @@ ggplot(data = PovertyByStrata, aes(Strata_ID_Number, Poverty)) +
 
 
 
+
 ```{r Sorting out lowest income strata}
 PovertyStrataMax <- PovertyByStrata %>% arrange(desc(Poverty)) %>% head(1)
 psmax <- PovertyStrataMax[[1]]
-  
-print(str_c("A strata with the highest % of population living below poverty line is ", psmax))
 
 PovertyMax_list <- demographics %>% 
   filter(Strata_ID_Number == psmax) %>% 
@@ -164,17 +161,18 @@ kable(head(PovertyMax_list), caption = psmax)
 ```
 
 
+
+
 ```{r}
 PovertyStrataMin <- PovertyByStrata %>% arrange(Poverty) %>% head(1)
 psmin <- PovertyStrataMin[[1]]
   
-print(str_c("A strata with the lowest % of population living below poverty line is ", psmin))
-
 PovertyMin_list <- demographics %>% 
   filter(Strata_ID_Number == psmin) %>% 
   select(CHSI_County_Name, CHSI_State_Name, Poverty) %>% 
   arrange(Poverty)
-head(PovertyMin_list)
+kable(head(PovertyMin_list), caption = str_c("A strata with the lowest % of population living below poverty line is ", psmin))
+
 ```
 
 
@@ -187,6 +185,21 @@ Pop_dens <- demographics %>% select(State_FIPS_Code, County_FIPS_Code, CHSI_Coun
 kable(head(select(Pop_dens, CHSI_County_Name, CHSI_State_Name, Population_Density)), caption = "County data, population density (people per square mile)")
 ```
 
+```{r Top 10 counties with highest population density}
+
+Top10Pop_dens <- Pop_dens %>% arrange(desc(Population_Density)) %>% head(10)
+
+kable(select(Top10Pop_dens, CHSI_County_Name, CHSI_State_Name, Population_Density), caption = "Top 10 counties with highest population density in the US")
+
+```
+
+
+Four of the boroughs of New York City are leading the list leaving other counties far behind. No wonder they have the most of COVID-19 cases.
+
+
+
+
+
 ```{r average life expectancy from SummaryMeasuresOfHealth table}
 SummaryMeasuresOfHealth <- read.csv("SUMMARYMEASURESOFHEALTH.csv")
 # Extracting columns for average life expectancy (ALE).
@@ -198,7 +211,7 @@ kable(head(select(ALEdf, CHSI_County_Name, CHSI_State_Name, ALE)), caption = "Co
 
 ```
 
-Let's left join these two data frames
+Let's left join the Population density and the Life Expectancy data frames:
 
 ```{r join Pop_dens and ALEdf tables}
 
@@ -233,7 +246,7 @@ Pop_dens_ALEdf %>%
 
 
 
-```{r}
+```{r LM ALE and Poverty}
 Poverty_lvl <- demographics %>% 
   select(State_FIPS_Code, County_FIPS_Code, CHSI_County_Name, CHSI_State_Name, Strata_ID_Number, Poverty) %>% 
   filter(Poverty > 0)
@@ -250,7 +263,7 @@ summary(ALE_Poverty_lvl)
 
 
 
-```{r}
+```{r Plotting LM ALE and Poverty}
 ALE_Poverty_lvl %>% 
   ggplot(aes(Poverty, fit)) + geom_line(colour = 'red') + 
   ggtitle("Linear Model of ALE ~ Poverty") +
@@ -260,8 +273,22 @@ ALE_Poverty_lvl %>%
 ```
 
 
-```{r}
+```{r average life expectancy by county US map}
+ALEdf1 <- ALEdf
 
+ALEdf1$State_FIPS_Code <- as.character(ALEdf1$State_FIPS_Code)
+ALEdf1$State_FIPS_Code <- as.character(ALEdf1$State_FIPS_Code)
+
+ALEdf1$State_FIPS_Code <- if_else(str_length(ALEdf1$State_FIPS_Code) == 1, str_c("0", ALEdf1$State_FIPS_Code), ALEdf1$State_FIPS_Code)
+
+ALEdf1$County_FIPS_Code <- as.character(ALEdf1$County_FIPS_Code)
+ALEdf1$County_FIPS_Code <- as.character(ALEdf1$County_FIPS_Code)
+
+ALEdf1$County_FIPS_Code <- if_else(str_length(ALEdf1$County_FIPS_Code) == 1, str_c("00", ALEdf1$County_FIPS_Code), ALEdf1$County_FIPS_Code)
+
+ALEdf1$County_FIPS_Code <- if_else(str_length(ALEdf1$County_FIPS_Code) == 2, str_c("0", ALEdf1$County_FIPS_Code), ALEdf1$County_FIPS_Code)
+
+ALEdf1$FIPS <- str_c(ALEdf1$State_FIPS_Code, ALEdf1$County_FIPS_Code)
 
 ```
 
