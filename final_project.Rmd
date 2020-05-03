@@ -107,7 +107,7 @@ demographics <- read.csv("DEMOGRAPHICS.csv")
 
 PovertyByStrata <- demographics %>% 
   group_by(Strata_ID_Number) %>%
-  filter(!str_detect(Poverty, "-")) %>% 
+  filter(Poverty > 0) %>% 
   summarise(Poverty = mean(Poverty))
 
 strata37 <- demographics %>% 
@@ -123,6 +123,23 @@ ggplot(data = PovertyByStrata, aes(Strata_ID_Number, Poverty)) +
   ggtitle("County data per strata, individuals living below poverty level, %") +
   xlab("Strata ID") + ylab("Poverty, %")
 ```
+
+
+
+```{r}
+PovertyStrataMax <- PovertyByStrata %>% arrange(desc(Poverty)) %>% head(1)
+psmax <- PovertyStrataMax[[1]]
+  
+print(str_c("A strata with the highest % of population living below poverty line is ", psmax))
+
+PovertyMax_list <- demographics %>% 
+  filter(Strata_ID_Number == psmax) %>% 
+  select(CHSI_County_Name, CHSI_State_Name, Poverty) %>% 
+  arrange(desc(Poverty))
+head(PovertyMax_list)
+
+```
+
 
 
 ```{r Extracting population density from demographics}
@@ -205,6 +222,11 @@ ALE_Poverty_lvl %>%
   xlab("Individuals Living Below Poverty line, %")
 ```
 
+
+```{r}
+
+
+```
 
 
 
