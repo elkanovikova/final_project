@@ -84,7 +84,7 @@ write.xlsx(county_fips, "County_FIPS.xlsx")
 
 I am a resident of Passaic county, NJ. Let's find what Strata my county belongs to, find Peer counties in this Strata, and count how many Peer counties are there:
 
-```{r Passaic county Strata}
+```{r Passaic county Strata number, list of counties}
 x <- filter(county_fips,County == "Passaic County")
 x <- as.character(x$PeerCountyGroup)
 y = str_c("Passaic county, NJ belongs to strata ", x)
@@ -98,8 +98,9 @@ Mystrata_table_title = str_c("Peer counties in Strata ", x, ", a total of ", tc,
 
 kable(My_strata, caption = Mystrata_table_title)
 
-
 ```
+
+
 
 ```{r Poverty levels by strata}
 demographics <- read.csv("DEMOGRAPHICS.csv")
@@ -110,23 +111,43 @@ PovertyByStrata <- demographics %>%
   filter(Poverty > 0) %>% 
   summarise(Poverty = mean(Poverty))
 
-strata37 <- demographics %>% 
-  filter(Strata_ID_Number == 37) %>% 
-  select(CHSI_County_Name, CHSI_State_Name, Poverty)
+PovertyByStrata <- PovertyByStrata %>%
+  arrange(Poverty) %>% 
+  mutate(rank = row_number())
 
-Strata9 <- PovertyByStrata %>% 
-  filter(Strata_ID_Number == 9)
+StrataCount <- summarise(PovertyByStrata, count = n())
+StrataCount <- StrataCount[[1]]
+
+```
+
+
+```{r My strata's ranking by Poverty level}
+
+
+
+Strata9 <- PovertyByStrata %>% filter(Strata_ID_Number == 9)
+
+Strata9ranking <- Strata9$rank[[1]]
+
+Passaic_pov_lvl <- str_c("Passaic county, NJ belongs to Strata ", x, "")
+
+
+```
+
+
+```{r Bar plot of stratas by Poverty level}
 
 ggplot(data = PovertyByStrata, aes(Strata_ID_Number, Poverty)) +
   geom_bar(stat = "identity") +
   geom_bar(data = Strata9, aes(Strata_ID_Number, Poverty, fill = Strata_ID_Number), stat = "identity", show.legend = FALSE)+ 
   ggtitle("County data per strata, individuals living below poverty level, %") +
   xlab("Strata ID") + ylab("Poverty, %")
+
 ```
 
 
 
-```{r}
+```{r Sorting out lowest income strata}
 PovertyStrataMax <- PovertyByStrata %>% arrange(desc(Poverty)) %>% head(1)
 psmax <- PovertyStrataMax[[1]]
   
@@ -136,8 +157,24 @@ PovertyMax_list <- demographics %>%
   filter(Strata_ID_Number == psmax) %>% 
   select(CHSI_County_Name, CHSI_State_Name, Poverty) %>% 
   arrange(desc(Poverty))
-head(PovertyMax_list)
 
+psmax <- str_c("A strata with the highest % of population living below poverty line is ", psmax)
+kable(head(PovertyMax_list), caption = psmax)
+
+```
+
+
+```{r}
+PovertyStrataMin <- PovertyByStrata %>% arrange(Poverty) %>% head(1)
+psmin <- PovertyStrataMin[[1]]
+  
+print(str_c("A strata with the lowest % of population living below poverty line is ", psmin))
+
+PovertyMin_list <- demographics %>% 
+  filter(Strata_ID_Number == psmin) %>% 
+  select(CHSI_County_Name, CHSI_State_Name, Poverty) %>% 
+  arrange(Poverty)
+head(PovertyMin_list)
 ```
 
 
