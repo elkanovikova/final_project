@@ -29,7 +29,7 @@ library(rvest)
 
 ```
 
-```{r}
+```{r Web scraping from data.gov}
 
 CHSIdescrip <- "https://catalog.data.gov/dataset/community-health-status-indicators-chsi-to-combat-obesity-heart-disease-and-cancer" %>%
   read_html() %>% html_nodes(".module-content") %>%
@@ -48,29 +48,27 @@ kable(CHSItable, caption = "CHSItable")
 ```
 
 
-```{r}
+```{r Peer counties decription}
 county_fips_descrip <- read_excel("CHSIpeers.xlsx", sheet = 1)
-
 county_fips_descrip <- county_fips_descrip[[2,1]]
-
 kable(county_fips_descrip, caption = "Peer Counties")
 
 ```
 
 
-```{r}
+```{r Importing Peer counties table}
 county_fips <- read_excel("CHSIpeers.xlsx", sheet = 2)
-
+#Renaming columns to remove blank spaces:
 county_fips <- county_fips %>% 
   transmute(FIPS = `County FIPS code`, County_Name_State = `County Name, State`, PeerCountyGroup = `Peer County Group`)
 
 county_fips$FIPS <- as.character(county_fips$FIPS)
-
+# leading zeros are missing from FIPS codes after importing from excel. Adding this zero:
 county_fips$FIPS <- if_else(str_length(county_fips$FIPS) == 4, str_c("0", county_fips$FIPS), county_fips$FIPS)
 
 ```
 
-```{r}
+```{r Scraping FIPS codes}
 county_fips <- county_fips %>% 
   mutate(County = str_extract(County_Name_State, ".*(?=,)"),
           State = str_extract(County_Name_State, "(?<=, ).*")) %>% 
@@ -81,7 +79,9 @@ write.xlsx(county_fips, "County_FIPS.xlsx")
 
 ```
 
-```{r}
+I am a resident of Passaic county, NJ. Let's find what Strata my county belongs to, find Peer counties in this Strata, and count how many Peer counties are there:
+
+```{r Passaic county Strata}
 x <- filter(county_fips,County == "Passaic County")
 x <- as.character(x$PeerCountyGroup)
 y = str_c("Passaic county, NJ belongs to strata ", x)
@@ -98,7 +98,7 @@ kable(My_strata, caption = Mystrata_table_title)
 
 ```
 
-```{r}
+```{r Poverty levels by strata}
 demographics <- read.csv("DEMOGRAPHICS.csv")
 
 
@@ -122,6 +122,27 @@ ggplot(data = PovertyByStrata, aes(Strata_ID_Number, Poverty)) +
 ```
 
 
+```{r Extracting population density from demographics}
+# Extracting columns for Population_Density.
+# Negative values in Population_Density column stand for "no data available", these lines need to be removed
+Pop_dens <- demographics %>% select(State_FIPS_Code, County_FIPS_Code, CHSI_County_Name, CHSI_State_Name, Strata_ID_Number, Population_Density) %>% 
+  filter(Population_Density >= 0)
+```
+
+```{r average life expectancy from SummaryMeasuresOfHealth table}
+SummaryMeasuresOfHealth <- read.csv("SUMMARYMEASURESOFHEALTH.csv")
+# Extracting columns for average life expectancy (ALE).
+# Negative values in ALE column stand for "no data available", these lines need to be removed
+ALEdf <- SummaryMeasuresOfHealth %>% 
+  select(State_FIPS_Code, County_FIPS_Code, CHSI_County_Name, CHSI_State_Name, Strata_ID_Number, ALE) %>% 
+  filter(ALE > 0)
+
+
+```
+
+```{r join Pop_dens and ALEdf tables}
+
+```
 
 
 
@@ -130,10 +151,13 @@ ggplot(data = PovertyByStrata, aes(Strata_ID_Number, Poverty)) +
 Bibliography:
 
 1. The County Health Rankings & Roadmaps program. (August 30, 2017). Peer Counties Tool.
+
 Retrieved 30 April 2020, from https://www.countyhealthrankings.org/resources/peer-counties-tool
 
 2. The County Health Rankings & Roadmaps program. (2020). New Jersey Rankings Data.
+
 Retrieved 30 April 2020, from https://www.countyhealthrankings.org/app/new-jersey/2020/downloads
 
 3. U.S. Government’s open data. (February 26, 2020). Community Health Status Indicators (CHSI) to Combat Obesity, Heart Disease and Cancer.
+
 Retrieved 30 April 2020, from https://catalog.data.gov/dataset/community-health-status-indicators-chsi-to-combat-obesity-heart-disease-and-cancer
