@@ -68,6 +68,9 @@ county_fips$FIPS <- if_else(str_length(county_fips$FIPS) == 4, str_c("0", county
 
 ```
 
+Output Excel file County_FIPS.xlsx contains FIPS codes without missing zeros.
+
+
 ```{r Scraping FIPS codes}
 county_fips <- county_fips %>% 
   mutate(County = str_extract(County_Name_State, ".*(?=,)"),
@@ -127,6 +130,7 @@ ggplot(data = PovertyByStrata, aes(Strata_ID_Number, Poverty)) +
 # Negative values in Population_Density column stand for "no data available", these lines need to be removed
 Pop_dens <- demographics %>% select(State_FIPS_Code, County_FIPS_Code, CHSI_County_Name, CHSI_State_Name, Strata_ID_Number, Population_Density) %>% 
   filter(Population_Density >= 0)
+kable(head(select(Pop_dens, CHSI_County_Name, CHSI_State_Name, Population_Density)), caption = "County data, population density (people per square mile)")
 ```
 
 ```{r average life expectancy from SummaryMeasuresOfHealth table}
@@ -136,13 +140,72 @@ SummaryMeasuresOfHealth <- read.csv("SUMMARYMEASURESOFHEALTH.csv")
 ALEdf <- SummaryMeasuresOfHealth %>% 
   select(State_FIPS_Code, County_FIPS_Code, CHSI_County_Name, CHSI_State_Name, Strata_ID_Number, ALE) %>% 
   filter(ALE > 0)
-
+kable(head(select(ALEdf, CHSI_County_Name, CHSI_State_Name, ALE)), caption = "County data, average life expectancy")
 
 ```
+
+Let's left join these two data frames
 
 ```{r join Pop_dens and ALEdf tables}
 
+Pop_dens_ALEdf <- drop_na(left_join(Pop_dens, ALEdf))
+
+kable(head(select(Pop_dens_ALEdf, CHSI_County_Name, CHSI_State_Name, Population_Density, ALE)), caption = "Population Density and Average Life Expectancy by county")
+
 ```
+
+Let's build a Linear Model of ALE ~ Population_Density: 
+
+
+```{r Linear Model ALE and Population_Density }
+ALElm <- lm(ALE ~ Population_Density, data=Pop_dens_ALEdf)
+Pop_dens_ALEdf$fit <- ALElm[["fitted.values"]]
+
+
+```
+
+```{r Plotting LM ALE and Pop dens}
+
+Pop_dens_ALEdf %>% 
+  ggplot(aes(Population_Density, fit)) + geom_line(colour = 'red') + 
+  ggtitle("Linear Model of ALE ~ Population_Density") +
+  geom_point(aes(Population_Density, ALE)) +
+  ylab("Average Life Expectancy") +
+  xlab("Population Density (people per sq mi)")
+
+
+```
+
+
+
+
+```{r}
+Poverty_lvl <- demographics %>% 
+  select(State_FIPS_Code, County_FIPS_Code, CHSI_County_Name, CHSI_State_Name, Strata_ID_Number, Poverty) %>% 
+  filter(Poverty > 0)
+
+ALE_Poverty_lvl <- drop_na(left_join(ALEdf, Poverty_lvl))
+
+PovertyLM <- lm(ALE ~ Poverty, data=ALE_Poverty_lvl)
+
+ALE_Poverty_lvl$fit <- PovertyLM[["fitted.values"]]
+
+summary(ALE_Poverty_lvl)
+
+```
+
+
+
+```{r}
+ALE_Poverty_lvl %>% 
+  ggplot(aes(Poverty, fit)) + geom_line(colour = 'red') + 
+  ggtitle("Linear Model of ALE ~ Poverty") +
+  geom_point(aes(Poverty, ALE)) +
+  ylab("Average Life Expectancy") +
+  xlab("Individuals Living Below Poverty line, %")
+```
+
+
 
 
 
