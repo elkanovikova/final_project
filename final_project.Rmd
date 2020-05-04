@@ -196,7 +196,7 @@ print(str_c("amongst the total of ", StrataCount, " Stratas in the US."))
 ```{r Bar plot of stratas by Poverty level}
 
 ggplot(data = PovertyByStrata, aes(Strata_ID_Number, Poverty)) +
-  geom_bar(stat = "identity") +
+  geom_bar(stat = "identity", alpha = .6) +
   geom_bar(data = Strata9, aes(Strata_ID_Number, Poverty, fill = Strata_ID_Number), stat = "identity", show.legend = FALSE)+ 
   ggtitle("County data per strata, individuals living below poverty level, %") +
   xlab("Strata ID") + ylab("Poverty, %")
