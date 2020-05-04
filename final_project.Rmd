@@ -55,223 +55,250 @@ CHSIdescrip <- CHSIdescrip[[1,1]]   # the text we need is in the first element o
 CHSIheader <- str_extract(CHSIdescrip, "[^\n \t].*")  # extracting the title of the text
 CHSIdate <- str_extract(CHSIdescrip, "M.*")           # extracting the date of the last update
 CHSItext <- str_extract(CHSIdescrip, "\n +C.*")       # extracting the text of the description
-CHSItext <- str_remove_all(CHSItext, "\n  +")         # removing line breaks
+CHSItext <- str_remove_all(CHSItext, "\n  +")         # removing excessive line breaks
 CHSItable <- tibble(x = c(CHSIheader, CHSIdate, CHSItext)) # writing the above as observations of a tibble
 kable(CHSItable, caption = "CHSItable")  # printing out as a tibble
 ```
 
 &nbsp;
 &nbsp;
-&nbsp;
-&nbsp;
 
-The file called DATAELEMENTDESCRIPTION.csv contains column names and column descriptions for each file from the source. I will import it and turn into a dataframe with values in the first column corresponding to file names, and second column containing dataframes with column descriptions for each file:
+The file called DATAELEMENTDESCRIPTION.csv contains column names and column descriptions for each file from the source. I will import it and nest it into a dataframe with values in the first column corresponding to file names, and second column containing dataframes with column descriptions for each file.
 
 &nbsp;
 &nbsp;
+
+Here is the list of files in the imported CHSI dataset:
+
 &nbsp;
 &nbsp;
 
 ```{r working with DATAELEMENTDESCRIPTION file}
 
-DATAELEMENTDESCRIPTION <- read.csv("DATAELEMENTDESCRIPTION.csv")
+DATAELEMENTDESCRIPTION <- read.csv("DATAELEMENTDESCRIPTION.csv") # importing a csv file into a tibble
 
-
-DATAELEMENTDESCRIPTION <- DATAELEMENTDESCRIPTION %>% 
+DATAELEMENTDESCRIPTION <- DATAELEMENTDESCRIPTION %>% # grouping by names of the files in column 1 and nesting
   group_by(PAGE_NAME) %>% 
   nest()
-glimpse(DATAELEMENTDESCRIPTION)
+#glimpse(DATAELEMENTDESCRIPTION)
 
-DATAELEMENTDESCRIPTION
+print(DATAELEMENTDESCRIPTION)
 
 ```
 
-
-
-
-
 &nbsp;
 &nbsp;
+
+Let's start with looking at column descriptions in the Demographics file:
+
+```{r glimpse at Demographics }
+# printing a head of the tibble located in line 1 column 2 of DATAELEMENTDESCRIPTION df
+kable(head(DATAELEMENTDESCRIPTION[[1,2]]), caption = "Demographics")
+```
+
+The CHSI dataset is labeling counties with Strata IDs. Here is the information provided about stratas, or “Peer County Groups”, on the countyhealthrankings.org website. I used the description given on sheet 1 of the csv file posted on this website:
+
 &nbsp;
 &nbsp;
 
 ```{r Peer counties decription}
-county_fips_descrip <- read_excel("CHSIpeers.xlsx", sheet = 1)
-county_fips_descrip <- county_fips_descrip[[2,1]]
-kable(county_fips_descrip, caption = "Peer Counties")
+county_fips_descrip <- read_excel("CHSIpeers.xlsx", sheet = 1) # reading the excel file, sheet 1
+county_fips_descrip <- county_fips_descrip[[2,1]]             # extracting the text from column 1, line 2
+kable(county_fips_descrip, caption = "Peer Counties")         # printing this text
 
 ```
 
-&nbsp;
-&nbsp;
 &nbsp;
 &nbsp;
 
 ```{r Importing Peer counties table}
-county_fips <- read_excel("CHSIpeers.xlsx", sheet = 2)
-#Renaming columns to remove blank spaces:
-county_fips <- county_fips %>% 
+county_fips <- read_excel("CHSIpeers.xlsx", sheet = 2) # reading the same excel file, sheet 2, to extract a dataframe
+county_fips <- county_fips %>% #Renaming columns to remove blank spaces:
   transmute(FIPS = `County FIPS code`, County_Name_State = `County Name, State`, PeerCountyGroup = `Peer County Group`)
-
 
 ```
 
 &nbsp;
 &nbsp;
-&nbsp;
-&nbsp;
-
-Output files County_FIPS.xlsx and County_FIPS.csv are generated.
-
-&nbsp;
-&nbsp;
-&nbsp;
-&nbsp;
-
-
-
 
 ```{r Scraping names of counties and states}
-county_fips <- county_fips %>% 
+county_fips <- county_fips %>% # using regex to separate county names and state names into two columns
   mutate(County = str_extract(County_Name_State, ".*(?=,)"),
           State = str_extract(County_Name_State, "(?<=, ).*")) %>% 
   select(-County_Name_State)
 
-write_excel_csv(county_fips, "County_FIPS.csv")
+write_excel_csv(county_fips, "County_FIPS.csv") # writing into csv and excel files
 write.xlsx(county_fips, "County_FIPS.xlsx")
 
 ```
 
-&nbsp;
-&nbsp;
+Output files County_FIPS.xlsx and County_FIPS.csv are generated. County name and State names are put into two separate columns.
+
 &nbsp;
 &nbsp;
 
-I am a resident of Passaic county, NJ. Let's find what Strata my county belongs to, find Peer counties in this Strata, and count how many Peer counties are there:
+I am a resident of Passaic county, NJ. I will find what Strata my county belongs to, find Peer counties in this Strata, and count how many Peer counties are there:
 
 ```{r Passaic county Strata number, list of counties}
-Passaic <- filter(county_fips,County == "Passaic County")
-Passaic <- as.character(Passaic$PeerCountyGroup)
-PassaicStrata = str_c("Passaic county, NJ belongs to strata ", Passaic)
-print(PassaicStrata)
+Passaic <- filter(county_fips,County == "Passaic County") # filtering out Passaic county line
+Passaic <- as.character(Passaic$PeerCountyGroup)         # reading the strata number associated with it
+PassaicStrata = str_c("Passaic county, NJ belongs to strata ", Passaic) # inserting this number into a chr string
+print(PassaicStrata) # printing this chr string
 
-PassaicStrata <- county_fips %>% filter(PeerCountyGroup == Passaic)
-tc <- PassaicStrata %>% summarise(count = n())
-tc <- as.character(tc$count[[1]])
-
+PassaicStrata <- county_fips %>% filter(PeerCountyGroup == Passaic) # filtering out counties that belong to the same strata as Passaic
+tc <- PassaicStrata %>% summarise(count = n()) # counting the number of observations
+tc <- as.character(tc$count[[1]])             # extracting this number as a chr variable
+# concatenating text and chr variables into one string: 
 Mystrata_table_title = str_c("Peer counties in Strata ", Passaic, ", a total of ", tc, " counties")
 
-kable(PassaicStrata, caption = Mystrata_table_title)
+```
+
+\newpage
+
+```{r strata 9 county listing}
+
+kable(PassaicStrata, caption = Mystrata_table_title) # output of the county listing in strata 9
 
 ```
 
 
 
-```{r Poverty levels by strata}
-demographics <- read.csv("DEMOGRAPHICS.csv")
 
+I will now work with the Demographics dataframe from the CHSI dataset, will look at the poverty levels by strata. Let's see how the strata my county belongs to compares to other stratas in the country.
+
+```{r Poverty levels by strata}
+demographics <- read.csv("DEMOGRAPHICS.csv") # importing the csv file
 
 PovertyByStrata <- demographics %>% 
-  group_by(Strata_ID_Number) %>%
-  filter(Poverty > 0) %>% 
-  summarise(Poverty = mean(Poverty))
+  group_by(Strata_ID_Number) %>%           # grouping by the strata id
+  filter(Poverty > 0) %>%                 # removing lines that have negative values by filtering. Negative values stand for "no data available"
+  summarise(Poverty = mean(Poverty))     # summarising the mean of Poverty for each strata
 
 PovertyByStrata <- PovertyByStrata %>%
-  arrange(Poverty) %>% 
-  mutate(rank = row_number())
+  arrange(Poverty) %>%                # arranging the lines by Poverty value with lowest on top
+  mutate(rank = row_number())         # adding a rank column, assigning a rank by Poverty to each strata
 
-StrataCount <- summarise(PovertyByStrata, count = n())
-StrataCount <- StrataCount[[1]]
+StrataCount <- summarise(PovertyByStrata, count = n()) # counting how many stratas
+StrataCount <- StrataCount[[1]]                        # assigning this value to a variable
 
 ```
 
 
 ```{r My strata ranking by Poverty level}
 
-Strata9 <- PovertyByStrata %>% filter(Strata_ID_Number == Passaic)
+Strata9 <- PovertyByStrata %>% filter(Strata_ID_Number == Passaic) # filtering out the line for my strata
 
-Strata9ranking <- Strata9$rank[[1]]
+Strata9ranking <- Strata9$rank[[1]]      # assigning the rank value to a variable
+Strata9pov <- Strata9$Poverty[[1]]      ## assigning the poverty value to a variable
 
+# concatenating text and chr variables into one string and changing its class to a tibble: 
+passaic_print <- as.tibble(str_c("Passaic county, NJ belongs to Strata ", Passaic, " that ranks ", Strata9ranking, "th lowest in Poverty level amongst the total of ", StrataCount, " Stratas in the US. \n", Strata9pov, "% of the population of Strata ", Passaic, " lives below poverty level."))
 
-print(str_c("Passaic county, NJ belongs to Strata ", Passaic, " that ranks ", Strata9ranking, "th lowest in Poverty level "))
-print(str_c("amongst the total of ", StrataCount, " Stratas in the US."))
+passaic_print <- passaic_print %>% rename(`...`=value)
+
+kable(passaic_print, caption = "Passaic County, NJ") # printing the string above 
+
 ```
 
+\newpage
+
+Now that information on Strata 9 ranking is obtained, I will demonstrate it on a bar plot. Strata 9 is shown in blue, and the plot confirms the information received above. We see how most of the stratas have a higher poverty level.
+
+&nbsp;
+&nbsp;
 
 ```{r Bar plot of stratas by Poverty level}
-
-ggplot(data = PovertyByStrata, aes(Strata_ID_Number, Poverty)) +
+# building a bar plot, showing strata 9 in blue:
+ggplot(data = PovertyByStrata, aes(Strata_ID_Number, Poverty)) + 
   geom_bar(stat = "identity", alpha = .6) +
   geom_bar(data = Strata9, aes(Strata_ID_Number, Poverty, fill = Strata_ID_Number), stat = "identity", show.legend = TRUE)+ 
-  ggtitle("County data per strata, individuals living below poverty level, %") +
+  ggtitle("Individuals living below poverty level per Strata, %") +
   xlab("Strata ID") + ylab("Poverty, %")
 
 ```
 
+Let's glimpse at stratas with highest and lowest poverty levels:
 
 
-
-```{r Sorting out lowest income strata}
+```{r Strata with highest poverty level}
+#arranging stratas by poverty in descending order to get an observation with the highest value
 PovertyStrataMax <- PovertyByStrata %>% arrange(desc(Poverty)) %>% head(1)
-psmax <- PovertyStrataMax[[1]]
+psmax <- PovertyStrataMax[[1]]  # assigning this strata number to a variable.
 
 PovertyMax_list <- demographics %>% 
-  filter(Strata_ID_Number == psmax) %>% 
-  select(CHSI_County_Name, CHSI_State_Name, Poverty) %>% 
-  arrange(desc(Poverty))
+  filter(Strata_ID_Number == psmax) %>% # filtering out lines that correspond to the strata number found above
+  select(CHSI_County_Name, CHSI_State_Name, Poverty) %>% # leaving out columns we don't need
+  arrange(desc(Poverty))                                # arranging by poverty in descending order
 
-psmax <- str_c("A strata with the highest % of population living below poverty line is ", psmax)
-kable(head(PovertyMax_list), caption = psmax)
+# preparing a header for a table to print:
+psmax <- str_c("A strata with the highest % of population living below the poverty level is number ", psmax)
+kable(head(PovertyMax_list), caption = psmax)  # printing this table
 
 ```
 
 
 
 
-```{r}
+```{r Strata with lowest poverty level}
+#arranging stratas by poverty in ascending order to get an observation with the lowest value
 PovertyStrataMin <- PovertyByStrata %>% arrange(Poverty) %>% head(1)
-psmin <- PovertyStrataMin[[1]]
+psmin <- PovertyStrataMin[[1]]  # assigning this strata number to a variable.
   
 PovertyMin_list <- demographics %>% 
-  filter(Strata_ID_Number == psmin) %>% 
+  filter(Strata_ID_Number == psmin) %>% # filtering out by strata number found above
   select(CHSI_County_Name, CHSI_State_Name, Poverty) %>% 
-  arrange(Poverty)
-kable(head(PovertyMin_list), caption = str_c("A strata with the lowest % of population living below poverty line is ", psmin))
+  arrange(Poverty) #arranging by poverty in ascending order
+#printing this table
+kable(head(PovertyMin_list), caption = str_c("A strata with the lowest % of population living below the poverty level is number ", psmin))
 
 ```
 
+&nbsp;
+&nbsp;
 
+The Population density data is provided by the Demographics file. I will select pertinent columns and clean the data of missing values.
 
 ```{r Extracting population density from demographics}
 # Extracting columns for Population_Density.
 # Negative values in Population_Density column stand for "no data available", these lines need to be removed
 Pop_dens <- demographics %>% select(State_FIPS_Code, County_FIPS_Code, CHSI_County_Name, CHSI_State_Name, Strata_ID_Number, Population_Density) %>% 
   filter(Population_Density >= 0)
+
 kable(head(select(Pop_dens, CHSI_County_Name, CHSI_State_Name, Population_Density)), caption = "County data, population density (people per square mile)")
 ```
+&nbsp;
+&nbsp;
+
+ I will filter out and print 10 most populated counties in the country.
+
+&nbsp;
+&nbsp;
 
 ```{r Top 10 counties with highest population density}
-
+#arranging counties by population density in descending order, selecting top 10
 Top10Pop_dens <- Pop_dens %>% arrange(desc(Population_Density)) %>% head(10)
-
+#printing this list
 kable(select(Top10Pop_dens, CHSI_County_Name, CHSI_State_Name, Population_Density), caption = "Top 10 counties with highest population density in the US")
 
 ```
 
 
-Four of the boroughs of New York City are leading the list leaving other counties far behind. No wonder they have the most of COVID-19 cases.
+Four of the boroughs of New York City are leading the list leaving other counties far behind. No wonder they have the most of COVID-19 cases. Another proof that self isolation is essential to stop spreading COVID-19.
 
+&nbsp;
+&nbsp;
 
-
-
+Now I will import and review the SUMMARYMEASURESOFHEALTH.csv file for the average life expectancy data. 
 
 ```{r average life expectancy from SummaryMeasuresOfHealth table}
+#reading the csv file
 SummaryMeasuresOfHealth <- read.csv("SUMMARYMEASURESOFHEALTH.csv")
 # Extracting columns for average life expectancy (ALE).
 # Negative values in ALE column stand for "no data available", these lines need to be removed
 ALEdf <- SummaryMeasuresOfHealth %>% 
   select(State_FIPS_Code, County_FIPS_Code, CHSI_County_Name, CHSI_State_Name, Strata_ID_Number, ALE) %>% 
   filter(ALE > 0)
+#print the head of the tibble:
 kable(head(select(ALEdf, CHSI_County_Name, CHSI_State_Name, ALE)), caption = "County data, average life expectancy")
 
 ```
@@ -280,17 +307,13 @@ kable(head(select(ALEdf, CHSI_County_Name, CHSI_State_Name, ALE)), caption = "Co
 &nbsp;
 &nbsp;
 
-&nbsp;
-&nbsp;
-&nbsp;
-&nbsp;
-
-Let's left join the Population density and the Life Expectancy data frames:
+I will left join the Population density and the Life Expectancy data frames to produce a Linear Model of these two variables:
 
 ```{r join Pop_dens and ALEdf tables}
-
+# left join of two df's and dropping any NA observations
 Pop_dens_ALEdf <- drop_na(left_join(Pop_dens, ALEdf))
 
+#print the head of the tibble:
 kable(head(select(Pop_dens_ALEdf, CHSI_County_Name, CHSI_State_Name, Population_Density, ALE)), caption = "Population Density and Average Life Expectancy by county")
 
 ```
@@ -299,28 +322,24 @@ kable(head(select(Pop_dens_ALEdf, CHSI_County_Name, CHSI_State_Name, Population_
 &nbsp;
 &nbsp;
 
-&nbsp;
-&nbsp;
-&nbsp;
-&nbsp;
-
-
-Let's build a Linear Model of ALE ~ Population_Density: 
+I built a Linear Model of ALE ~ Population_Density graph below, but does not look very informative. The scatter plot is jammed to the left. There are probably very few counties with high population density. I listed them previously in this report in Table 9.
 
 
 ```{r Linear Model ALE and Population_Density }
+#linear model
 ALElm <- lm(ALE ~ Population_Density, data=Pop_dens_ALEdf)
-Pop_dens_ALEdf$fit <- ALElm[["fitted.values"]]
 
+#extracting the list element containing fitted values and adding it to the original ALE and Population Density tibble
+Pop_dens_ALEdf$fit <- ALElm[["fitted.values"]] 
 
 ```
 
 ```{r Plotting LM ALE and Pop dens}
-
+# plotting the LM data obtained above. LM data is the red line, the original county data is a scatter plot in translucent blue
 Pop_dens_ALEdf %>% 
   ggplot(aes(Population_Density, fit)) + geom_line(colour = 'red') + 
   ggtitle("Linear Model of ALE ~ Population_Density") +
-  geom_point(aes(Population_Density, ALE), alpha = .3, color = "blue") +
+  geom_point(aes(Population_Density, ALE), alpha = .3, color = "blue") + 
   ylab("Average Life Expectancy") +
   xlab("Population Density (people per sq mi)")
 
@@ -507,6 +526,8 @@ ggplot(NJobesity1, aes(Year, obesity)) +
 &nbsp;
 &nbsp;
 &nbsp;
+
+\newpage
 
 Bibliography:
 
