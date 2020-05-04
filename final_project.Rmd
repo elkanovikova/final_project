@@ -37,22 +37,27 @@ library(choroplethrMaps)
 &nbsp;
 &nbsp;
 
+I selected a dataset of Community Health Status Indicators from the Data.gov website. Let's read the description of provided data from the website:
+
+&nbsp;
+&nbsp;
+
 ```{r Web scraping from data.gov}
 
+# Extracting text from the website:
 CHSIdescrip <- "https://catalog.data.gov/dataset/community-health-status-indicators-chsi-to-combat-obesity-heart-disease-and-cancer" %>%
   read_html() %>% html_nodes(".module-content") %>%
   html_text()
 CHSIdescrip <- tibble(text = CHSIdescrip)
-CHSIdescrip <- CHSIdescrip[[1,1]]
-#strwrap(CHSIdescrip, width = 80)
+CHSIdescrip <- CHSIdescrip[[1,1]]   # the text we need is in the first element of the resulting tibble
 
-
-CHSIheader <- str_extract(CHSIdescrip, "[^\n \t].*")
-CHSIdate <- str_extract(CHSIdescrip, "M.*")
-CHSItext <- str_extract(CHSIdescrip, "\n +C.*") 
-CHSItext <- str_remove_all(CHSItext, "\n  +")
-CHSItable <- tibble(x = c(CHSIheader, CHSIdate, CHSItext))
-kable(CHSItable, caption = "CHSItable")
+# using regular expressions to clean up line breaks, tabs:
+CHSIheader <- str_extract(CHSIdescrip, "[^\n \t].*")  # extracting the title of the text
+CHSIdate <- str_extract(CHSIdescrip, "M.*")           # extracting the date of the last update
+CHSItext <- str_extract(CHSIdescrip, "\n +C.*")       # extracting the text of the description
+CHSItext <- str_remove_all(CHSItext, "\n  +")         # removing line breaks
+CHSItable <- tibble(x = c(CHSIheader, CHSIdate, CHSItext)) # writing the above as observations of a tibble
+kable(CHSItable, caption = "CHSItable")  # printing out as a tibble
 ```
 
 &nbsp;
@@ -197,7 +202,7 @@ print(str_c("amongst the total of ", StrataCount, " Stratas in the US."))
 
 ggplot(data = PovertyByStrata, aes(Strata_ID_Number, Poverty)) +
   geom_bar(stat = "identity", alpha = .6) +
-  geom_bar(data = Strata9, aes(Strata_ID_Number, Poverty, fill = Strata_ID_Number), stat = "identity", show.legend = FALSE)+ 
+  geom_bar(data = Strata9, aes(Strata_ID_Number, Poverty, fill = Strata_ID_Number), stat = "identity", show.legend = TRUE)+ 
   ggtitle("County data per strata, individuals living below poverty level, %") +
   xlab("Strata ID") + ylab("Poverty, %")
 
@@ -486,9 +491,13 @@ NJobesity1 <- NJobesity %>%
   gather(Year, obesity, 3:13) %>% 
   group_by(Year) %>% 
   summarise(obesity = mean(obesity))
-NJobesity1$Year <- as.numeric(NJobesity1$Year)
+NJobesity1$Year <- as.double(NJobesity1$Year)
 
-ggplot(NJobesity1, aes(Year, obesity)) + geom_point() + geom_line() + geom_smooth()
+ggplot(NJobesity1, aes(Year, obesity)) + 
+  geom_point(aes(size = obesity^15), color = "darkred", show.legend = FALSE) + 
+  geom_line() + geom_smooth() +
+  ggtitle("New Jersey Adult Obesity Rates") +
+  xlab("Year") + ylab("Obesity, % of population")
 
 ```
 
