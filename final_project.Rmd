@@ -22,6 +22,7 @@ library(lubridate)
 library(magrittr)
 library(readxl)
 library(dplyr)
+library(tidyr)
 library(stringr)
 library(openxlsx)
 library(knitr)
@@ -314,7 +315,7 @@ Pop_dens_ALEdf$fit <- ALElm[["fitted.values"]]
 Pop_dens_ALEdf %>% 
   ggplot(aes(Population_Density, fit)) + geom_line(colour = 'red') + 
   ggtitle("Linear Model of ALE ~ Population_Density") +
-  geom_point(aes(Population_Density, ALE)) +
+  geom_point(aes(Population_Density, ALE), alpha = .3, color = "blue") +
   ylab("Average Life Expectancy") +
   xlab("Population Density (people per sq mi)")
 
@@ -351,7 +352,7 @@ summary(ALE_Poverty_lvl)
 ALE_Poverty_lvl %>% 
   ggplot(aes(Poverty, fit)) + geom_line(colour = 'red') + 
   ggtitle("Linear Model of ALE ~ Poverty") +
-  geom_point(aes(Poverty, ALE)) +
+  geom_point(aes(Poverty, ALE), alpha = .2, color = "blue") +
   ylab("Average Life Expectancy") +
   xlab("Individuals Living Below Poverty line, %")
 ```
@@ -389,7 +390,7 @@ county_choropleth(ALEdfPlot, title = "Average Life Expectancy by county",legend 
 
 ```{r average life expectancy in NJ and NY}
 county_choropleth(ALEdfPlot, title = "New Jersey and New York, Average Life Expectancy by county",legend = "Age", state_zoom = c("new jersey", "new york"), num_colors = 9)
-NJ_ALE <- county_choropleth(ALEdfPlot, title = "NJ Average Life Expectancy",legend = "Age", state_zoom = "new jersey", num_colors = 9)
+NJ_ALE <- county_choropleth(ALEdfPlot, title = "2010 NJ Average Life Expectancy",legend = "Age", state_zoom = "new jersey", num_colors = 9)
 ```
 
 
@@ -469,17 +470,25 @@ kable(NJobesity, caption = "New Jersey Adult Obesity levels, %")
 NJ2020 <- NJ2020 %>% rename(value = "2020", region = FIPS) %>% drop_na()
 NJ2020$region <- as.numeric(NJ2020$region)
 
-NJobesity_plot <- county_choropleth(NJ2020, title = "NJ Obesity levels, %", state_zoom = "new jersey", num_colors = 9)
+NJobesity_plot <- county_choropleth(NJ2020, title = "2020 NJ Obesity levels by Year, %", state_zoom = "new jersey", num_colors = 9)
 
 library(gridExtra)
 grid.arrange(NJ_ALE, NJobesity_plot, ncol=2)
 
-#gather()
+
 
 ```
 
 
-```{r}
+```{r Obesity rates by year}
+
+NJobesity1 <- NJobesity %>% 
+  gather(Year, obesity, 3:13) %>% 
+  group_by(Year) %>% 
+  summarise(obesity = mean(obesity))
+NJobesity1$Year <- as.numeric(NJobesity1$Year)
+
+ggplot(NJobesity1, aes(Year, obesity)) + geom_point() + geom_line() + geom_smooth()
 
 ```
 
