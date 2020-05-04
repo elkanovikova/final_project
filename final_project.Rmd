@@ -59,6 +59,36 @@ kable(CHSItable, caption = "CHSItable")
 &nbsp;
 &nbsp;
 
+The file called DATAELEMENTDESCRIPTION.csv contains column names and column descriptions for each file from the source. I will import it and turn into a dataframe with values in the first column corresponding to file names, and second column containing dataframes with column descriptions for each file:
+
+&nbsp;
+&nbsp;
+&nbsp;
+&nbsp;
+
+```{r working with DATAELEMENTDESCRIPTION file}
+
+DATAELEMENTDESCRIPTION <- read.csv("DATAELEMENTDESCRIPTION.csv")
+
+
+DATAELEMENTDESCRIPTION <- DATAELEMENTDESCRIPTION %>% 
+  group_by(PAGE_NAME) %>% 
+  nest()
+glimpse(DATAELEMENTDESCRIPTION)
+
+DATAELEMENTDESCRIPTION
+
+```
+
+
+
+
+
+&nbsp;
+&nbsp;
+&nbsp;
+&nbsp;
+
 ```{r Peer counties decription}
 county_fips_descrip <- read_excel("CHSIpeers.xlsx", sheet = 1)
 county_fips_descrip <- county_fips_descrip[[2,1]]
@@ -86,6 +116,13 @@ county_fips <- county_fips %>%
 &nbsp;
 
 Output files County_FIPS.xlsx and County_FIPS.csv are generated.
+
+&nbsp;
+&nbsp;
+&nbsp;
+&nbsp;
+
+
 
 
 ```{r Scraping names of counties and states}
@@ -352,6 +389,7 @@ county_choropleth(ALEdfPlot, title = "Average Life Expectancy by county",legend 
 
 ```{r average life expectancy in NJ and NY}
 county_choropleth(ALEdfPlot, title = "New Jersey and New York, Average Life Expectancy by county",legend = "Age", state_zoom = c("new jersey", "new york"), num_colors = 9)
+NJ_ALE <- county_choropleth(ALEdfPlot, title = "NJ Average Life Expectancy",legend = "Age", state_zoom = "new jersey", num_colors = 9)
 ```
 
 
@@ -369,8 +407,81 @@ An excel file of average life expectancy with FIPS codes named ALE_with_FIPS.xls
 
 
 
+```{r New Jersey Rankings Data}
+
+NJ2010 <- read_excel("2010 County Health Ranking New Jersey Data - v2.xls", sheet = 4) %>% 
+  select(FIPS = `...1`, County = `...3`, "2010" = `Adult obesity`)
+NJ2010$"2010" <- as.double(NJ2010$"2010")
+
+NJ2011 <- read_excel("2011 County Health Ranking New Jersey Data - v4.xls", sheet = 4) %>% 
+  select(FIPS = `...1`, County = `...3`, "2011" = `Adult obesity`)
+NJ2011$"2011" <- as.double(NJ2011$"2011")
+
+NJ2012 <- read_excel("2012 County Health Ranking New Jersey Data - v4.xls", sheet = 4) %>% 
+  select(FIPS = `...1`, County = `...3`, "2012" = `Adult obesity`)
+NJ2012$"2012" <- as.double(NJ2012$"2012")
+
+NJ2013 <- read_excel("2013 County Health Ranking New Jersey Data - v1_0.xls", sheet = 5) %>% 
+  select(FIPS = `*Data for measures with an asterisk should not be compared with prior years due to changes in definition.`, County = `...3`, "2013" = `Adult obesity`)
+NJ2013$"2013" <- as.double(NJ2013$"2013")
+
+NJ2014 <- read_excel("2014 County Health Rankings New Jersey Data - v6.xls", sheet = 4) %>% 
+  select(FIPS = `*Data for measures with an asterisk should not be compared with prior years due to changes in definition.`, County = `...3`, "2014" = `Adult obesity`)
+NJ2014$"2014" <- as.double(NJ2014$"2014")
+
+NJ2015 <- read_excel("2015 County Health Rankings New Jersey Data - v3.xls", sheet = 4) %>% 
+  select(FIPS = `...1`, County = `...3`, "2015" = `Adult obesity`)
+NJ2015$"2015" <- as.double(NJ2015$"2015")
+
+NJ2016 <- read_excel("2016 County Health Rankings New Jersey Data - v3.xls", sheet = 4) %>% 
+  select(FIPS = `...1`, County = `...3`, "2016" = `Adult obesity`)
+NJ2016$"2016" <- as.double(NJ2016$"2016")
+
+NJ2017 <- read_excel("2017 County Health Rankings New Jersey Data - v2.xls", sheet = 4) %>% 
+  select(FIPS = `...1`, County = `...3`, "2017" = `Adult obesity`)
+NJ2017$"2017" <- as.double(NJ2017$"2017")
+
+NJ2018 <- read_excel("2018 County Health Rankings New Jersey Data - v3.xls", sheet = 4) %>% 
+  select(FIPS = `...1`, County = `...3`, "2018" = `Adult obesity`)
+NJ2018$"2018" <- as.double(NJ2018$"2018")
+
+NJ2019 <- read_excel("2019 County Health Rankings New Jersey Data - v1_0.xls", sheet = 4) %>% 
+  select(FIPS = `...1`, County = `...3`, "2019" = `Adult obesity`)
+NJ2019$"2019" <- as.double(NJ2019$"2019")
+
+NJ2020 <- read_excel("2020 County Health Rankings New Jersey Data - v1_0.xlsx", sheet = 4) %>% 
+  select(FIPS = `...1`, County = `...3`, "2020" = `Adult obesity`)
+NJ2020$"2020" <- as.double(NJ2020$"2020")
+
+NJobesity <- left_join(NJ2010, NJ2011)
+NJobesity <- left_join(NJobesity, NJ2012)
+NJobesity <- left_join(NJobesity, NJ2013)
+NJobesity <- left_join(NJobesity, NJ2014)
+NJobesity <- left_join(NJobesity, NJ2015)
+NJobesity <- left_join(NJobesity, NJ2016)
+NJobesity <- left_join(NJobesity, NJ2017)
+NJobesity <- left_join(NJobesity, NJ2018)
+NJobesity <- left_join(NJobesity, NJ2019)
+NJobesity <- drop_na(left_join(NJobesity, NJ2020))
+
+kable(NJobesity, caption = "New Jersey Adult Obesity levels, %")
+
+NJ2020 <- NJ2020 %>% rename(value = "2020", region = FIPS) %>% drop_na()
+NJ2020$region <- as.numeric(NJ2020$region)
+
+NJobesity_plot <- county_choropleth(NJ2020, title = "NJ Obesity levels, %", state_zoom = "new jersey", num_colors = 9)
+
+library(gridExtra)
+grid.arrange(NJ_ALE, NJobesity_plot, ncol=2)
+
+#gather()
+
+```
 
 
+```{r}
+
+```
 
 
 
