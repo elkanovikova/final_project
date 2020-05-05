@@ -1,5 +1,5 @@
 ---
-title: "Final Project"
+title: "Final Project, 2020SP - DATA WRANGLING 16:954:597:01"
 author: "Elena Novikova"
 date: "5/04/2020"
 output: pdf_document
@@ -14,6 +14,8 @@ knitr::opts_chunk$set(
 ```
 
 
+GitHub repository for the project:
+https://github.com/elkanovikova/final_project
 
 ```{r}
 
@@ -37,7 +39,7 @@ library(choroplethrMaps)
 &nbsp;
 &nbsp;
 
-I selected a dataset of Community Health Status Indicators from the Data.gov website. Let's read the description of provided data from the website:
+For my final project I selected a dataset of Community Health Status Indicators from the Data.gov website. Let's read the description of teh dataset from the website:
 
 &nbsp;
 &nbsp;
@@ -68,7 +70,7 @@ The file called DATAELEMENTDESCRIPTION.csv contains column names and column desc
 &nbsp;
 &nbsp;
 
-Here is the list of files in the imported CHSI dataset:
+Here is the list of csv data files in the imported CHSI dataset:
 
 &nbsp;
 &nbsp;
@@ -217,41 +219,6 @@ ggplot(data = PovertyByStrata, aes(Strata_ID_Number, Poverty)) +
 
 ```
 
-Let's glimpse at stratas with highest and lowest poverty levels:
-
-
-```{r Strata with highest poverty level}
-#arranging stratas by poverty in descending order to get an observation with the highest value
-PovertyStrataMax <- PovertyByStrata %>% arrange(desc(Poverty)) %>% head(1)
-psmax <- PovertyStrataMax[[1]]  # assigning this strata number to a variable.
-
-PovertyMax_list <- demographics %>% 
-  filter(Strata_ID_Number == psmax) %>% # filtering out lines that correspond to the strata number found above
-  select(CHSI_County_Name, CHSI_State_Name, Poverty) %>% # leaving out columns we don't need
-  arrange(desc(Poverty))                                # arranging by poverty in descending order
-
-# preparing a header for a table to print:
-psmax <- str_c("A strata with the highest % of population living below the poverty level is number ", psmax)
-kable(head(PovertyMax_list), caption = psmax)  # printing this table
-
-```
-
-
-
-
-```{r Strata with lowest poverty level}
-#arranging stratas by poverty in ascending order to get an observation with the lowest value
-PovertyStrataMin <- PovertyByStrata %>% arrange(Poverty) %>% head(1)
-psmin <- PovertyStrataMin[[1]]  # assigning this strata number to a variable.
-  
-PovertyMin_list <- demographics %>% 
-  filter(Strata_ID_Number == psmin) %>% # filtering out by strata number found above
-  select(CHSI_County_Name, CHSI_State_Name, Poverty) %>% 
-  arrange(Poverty) #arranging by poverty in ascending order
-#printing this table
-kable(head(PovertyMin_list), caption = str_c("A strata with the lowest % of population living below the poverty level is number ", psmin))
-
-```
 
 &nbsp;
 &nbsp;
@@ -266,8 +233,9 @@ Pop_dens <- demographics %>% select(State_FIPS_Code, County_FIPS_Code, CHSI_Coun
 
 kable(head(select(Pop_dens, CHSI_County_Name, CHSI_State_Name, Population_Density)), caption = "County data, population density (people per square mile)")
 ```
-&nbsp;
-&nbsp;
+
+
+\newpage
 
  I will filter out and print 10 most populated counties in the country.
 
@@ -302,6 +270,7 @@ ALEdf <- SummaryMeasuresOfHealth %>%
 kable(head(select(ALEdf, CHSI_County_Name, CHSI_State_Name, ALE)), caption = "County data, average life expectancy")
 
 ```
+
 &nbsp;
 &nbsp;
 &nbsp;
@@ -317,11 +286,9 @@ Pop_dens_ALEdf <- drop_na(left_join(Pop_dens, ALEdf))
 kable(head(select(Pop_dens_ALEdf, CHSI_County_Name, CHSI_State_Name, Population_Density, ALE)), caption = "Population Density and Average Life Expectancy by county")
 
 ```
-&nbsp;
-&nbsp;
-&nbsp;
-&nbsp;
 
+
+\newpage
 I built a Linear Model of ALE ~ Population_Density graph below, but does not look very informative. The scatter plot is jammed to the left. There are probably very few counties with high population density. I listed them previously in this report in Table 9.
 
 
@@ -335,7 +302,7 @@ Pop_dens_ALEdf$fit <- ALElm[["fitted.values"]]
 ```
 
 ```{r Plotting LM ALE and Pop dens}
-# plotting the LM data obtained above. LM data is the red line, the original county data is a scatter plot in translucent blue
+# plotting the LM data obtained above. LM is the red line, the original county data is a scatter plot in translucent blue
 Pop_dens_ALEdf %>% 
   ggplot(aes(Population_Density, fit)) + geom_line(colour = 'red') + 
   ggtitle("Linear Model of ALE ~ Population_Density") +
@@ -346,33 +313,39 @@ Pop_dens_ALEdf %>%
 
 ```
 
+&nbsp;
+&nbsp;
 
+I will build a Linear Model of Average Life Expectancy ~ Poverty and see if there is a better correlation between these two variables. See the LM data printed below: 
 
 &nbsp;
 &nbsp;
-&nbsp;
-&nbsp;
+
 ```{r LM ALE and Poverty}
+#extracting columns from the demographics df
 Poverty_lvl <- demographics %>% 
   select(State_FIPS_Code, County_FIPS_Code, CHSI_County_Name, CHSI_State_Name, Strata_ID_Number, Poverty) %>% 
   filter(Poverty > 0)
 
-ALE_Poverty_lvl <- drop_na(left_join(ALEdf, Poverty_lvl))
+ALE_Poverty_lvl <- drop_na(left_join(ALEdf, Poverty_lvl)) #left join ALE and Poverty tibbles
 
-PovertyLM <- lm(ALE ~ Poverty, data=ALE_Poverty_lvl)
+PovertyLM <- lm(ALE ~ Poverty, data=ALE_Poverty_lvl) # building an LM
 
-ALE_Poverty_lvl$fit <- PovertyLM[["fitted.values"]]
+ALE_Poverty_lvl$fit <- PovertyLM[["fitted.values"]] # adding fitted values to the ALE & Poverty tibble
 
 summary(ALE_Poverty_lvl)
 
 ```
 
+\newpage
+
+The LM of Average Life Expectancy ~ Poverty plot below provides a visible correlation. People in populations with less percent below poverty line tend to live longer lives. 
 
 &nbsp;
 &nbsp;
-&nbsp;
-&nbsp;
+
 ```{r Plotting LM ALE and Poverty}
+# plotting the LM data obtained above. LM is the red line, the original county data is a scatter plot in translucent blue
 ALE_Poverty_lvl %>% 
   ggplot(aes(Poverty, fit)) + geom_line(colour = 'red') + 
   ggtitle("Linear Model of ALE ~ Poverty") +
@@ -387,53 +360,84 @@ ALE_Poverty_lvl %>%
 
 &nbsp;
 &nbsp;
+
+Next, I will build the Average Life Expectancy data by county on the US map using the ALEdf dataframe I previously extracted from the SUMMARYMEASURESOFHEALTH.csv file. To use the choroplethr library I need the FIPS codes be in a 5-digit format. The original file has them separated into county and state code columns. I will add a new FIPS column.
+
 &nbsp;
 &nbsp;
+
 ```{r average life expectancy by county US map}
 ALEdf1 <- ALEdf
-
-ALEdf1$State_FIPS_Code <- as.character(ALEdf1$State_FIPS_Code)
+#changing column class into chr to further apply the str_c function
+ALEdf1$State_FIPS_Code <- as.character(ALEdf1$State_FIPS_Code) 
 
 ALEdf1$County_FIPS_Code <- as.character(ALEdf1$County_FIPS_Code)
-
+#adding 2 leading zeros to 1-digit county codes
 ALEdf1$County_FIPS_Code <- if_else(str_length(ALEdf1$County_FIPS_Code) == 1, str_c("00", ALEdf1$County_FIPS_Code), ALEdf1$County_FIPS_Code)
-
+#adding 1 leading zero to 2-digit county codes
 ALEdf1$County_FIPS_Code <- if_else(str_length(ALEdf1$County_FIPS_Code) == 2, str_c("0", ALEdf1$County_FIPS_Code), ALEdf1$County_FIPS_Code)
-
+#concatenating the state and county codes and changing the class to numeric
 ALEdf1$FIPS <- as.numeric(str_c(ALEdf1$State_FIPS_Code, ALEdf1$County_FIPS_Code))
-
+# dropping columns that are not needed
 ALEdf1 <- ALEdf1 %>% select(FIPS, CHSI_County_Name, CHSI_State_Name, ALE)
-
+#printing the resulting tibble
 kable(head(ALEdf1), caption = "FIPS codes added to the Average Life Expectancy by county dataframe")
-
-ALEdfPlot <- ALEdf1 %>% rename(value = ALE, region = FIPS)
-county_choropleth(ALEdfPlot, title = "Average Life Expectancy by county",legend = "Age", num_colors = 9)
 
 
 ```
 
+\newpage
+
+Since the FIPS codes are added, I can plot the ALE data on the US map. 
+
+While working with choroplethr I noticed that the fips code have to be in a numeric format, and missing leading zeros for 1-digit state codes are not a problem.
+
+The resulting map has very interesting patterns that could be further explored. We can see the area covering states from Texas to Carolinas where ALE is consistely low. I wonder what factors are causing the ALE being relatively low on such a large area. 
+
+&nbsp;
+&nbsp;
+
+```{r plotting ALE on US map using choropleth}
+
+#renaming the columns for county_choropleth and plotting the map
+ALEdfPlot <- ALEdf1 %>% rename(value = ALE, region = FIPS)
+county_choropleth(ALEdfPlot, title = "Average Life Expectancy by county",legend = "Age", num_colors = 9)
+
+```
+
+\newpage
+I zoomed in to New York and New Jersey. Downstate NY is doing great in terms of ALE, and similar do Bergen, Morris, Hunterdon, and Somerset counties in New Jersey.
+
+
 ```{r average life expectancy in NJ and NY}
 county_choropleth(ALEdfPlot, title = "New Jersey and New York, Average Life Expectancy by county",legend = "Age", state_zoom = c("new jersey", "new york"), num_colors = 9)
-NJ_ALE <- county_choropleth(ALEdfPlot, title = "2010 NJ Average Life Expectancy",legend = "Age", state_zoom = "new jersey", num_colors = 9)
+
+# saving the NJ ALE map to use later, see line 541
+NJ_ALE <- county_choropleth(ALEdfPlot, title = "NJ Average Life Expectancy",legend = "Age", state_zoom = "new jersey", num_colors = 9)
 ```
 
 
 ```{r exporting average life expectancy with FIPS codes in excel}
+
+#exporting average life expectancy with FIPS codes in excel
 write.xlsx(ALEdf1, "ALE_with_FIPS.xlsx")
 ```
 
 &nbsp;
 &nbsp;
-&nbsp;
-&nbsp;
 
 An excel file of average life expectancy with FIPS codes named ALE_with_FIPS.xlsx is created.
 
+&nbsp;
+&nbsp;
 
+My second source of data, the countyhealthrankings.org website provides yearly health data for each state. I downloded files for New Jersey, years 2010 - 2020, and extracted data on Adult Obesity. I merged data from all years into one tibble to furhter work with it. 
 
+&nbsp;
+&nbsp;
 
 ```{r New Jersey Rankings Data}
-
+# importing excel files, extracting the pertinent columns
 NJ2010 <- read_excel("2010 County Health Ranking New Jersey Data - v2.xls", sheet = 4) %>% 
   select(FIPS = `...1`, County = `...3`, "2010" = `Adult obesity`)
 NJ2010$"2010" <- as.double(NJ2010$"2010")
@@ -477,7 +481,7 @@ NJ2019$"2019" <- as.double(NJ2019$"2019")
 NJ2020 <- read_excel("2020 County Health Rankings New Jersey Data - v1_0.xlsx", sheet = 4) %>% 
   select(FIPS = `...1`, County = `...3`, "2020" = `Adult obesity`)
 NJ2020$"2020" <- as.double(NJ2020$"2020")
-
+# merging yearly tables into one tibble
 NJobesity <- left_join(NJ2010, NJ2011)
 NJobesity <- left_join(NJobesity, NJ2012)
 NJobesity <- left_join(NJobesity, NJ2013)
@@ -488,35 +492,54 @@ NJobesity <- left_join(NJobesity, NJ2017)
 NJobesity <- left_join(NJobesity, NJ2018)
 NJobesity <- left_join(NJobesity, NJ2019)
 NJobesity <- drop_na(left_join(NJobesity, NJ2020))
-
+#printing the resulting df
 kable(NJobesity, caption = "New Jersey Adult Obesity levels, %")
 
+#preparing the 2020 data for county_choropleth
 NJ2020 <- NJ2020 %>% rename(value = "2020", region = FIPS) %>% drop_na()
 NJ2020$region <- as.numeric(NJ2020$region)
-
+# saving the 2020 NJ obesity map
 NJobesity_plot <- county_choropleth(NJ2020, title = "2020 NJ Obesity levels by Year, %", state_zoom = "new jersey", num_colors = 9)
-
-library(gridExtra)
-grid.arrange(NJ_ALE, NJobesity_plot, ncol=2)
-
-
 
 ```
 
+&nbsp;
+&nbsp;
+
+Since I have ALE and Obesity data, I will put it on the NJ map side by side using the grid.arrange function. I used the 2020 Obesity data for this plot. Although expected, still interesting to see how counties with higher obesity rates overlap with lower Average Life Expectancy rates. 
+
+&nbsp;
+&nbsp;
+
+```{r plotting NJ ALE and Adult Obesity}
+
+# plotting NJ ALE and Adult Obesity data side by side
+library(gridExtra)
+grid.arrange(NJ_ALE, NJobesity_plot, ncol=2)
+```
+
+
+\newpage
+
+And the last step is to display how the obesity rate changed in a span of 11 years in New Jersey.
+Unfortunately, this rate is consistently increasing according to the plot below.
+
 
 ```{r Obesity rates by year}
-
+# summarising county data into NJ data:
 NJobesity1 <- NJobesity %>% 
-  gather(Year, obesity, 3:13) %>% 
+  gather(Year, obesity, 3:13) %>% # tidying the data into one observation per row
   group_by(Year) %>% 
   summarise(obesity = mean(obesity))
-NJobesity1$Year <- as.double(NJobesity1$Year)
-
+NJobesity1$Year <- as.double(NJobesity1$Year) # changing class to double to plot data
+# plotting
 ggplot(NJobesity1, aes(Year, obesity)) + 
   geom_point(aes(size = obesity^15), color = "darkred", show.legend = FALSE) + 
   geom_line() + geom_smooth() +
   ggtitle("New Jersey Adult Obesity Rates") +
   xlab("Year") + ylab("Obesity, % of population")
+
+write_excel_csv(NJobesity1, "NJobesityRate2010-2020.csv")
 
 ```
 
@@ -528,6 +551,11 @@ ggplot(NJobesity1, aes(Year, obesity)) +
 &nbsp;
 
 \newpage
+
+GitHub repository for the project:
+https://github.com/elkanovikova/final_project
+
+&nbsp;
 
 Bibliography:
 
